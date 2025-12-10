@@ -1,6 +1,7 @@
 package com.shelflife.project.security;
 
 import java.util.Date;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,7 @@ public class JwtService {
 
     public String generateToken(String email) {
         return Jwts.builder()
+                .claim("jti", UUID.randomUUID().toString())
                 .setSubject(email)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + 24 * 60 * 60 * 1000))
