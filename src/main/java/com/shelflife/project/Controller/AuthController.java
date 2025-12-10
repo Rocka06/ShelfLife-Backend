@@ -42,29 +42,45 @@ public class AuthController {
     private PasswordEncoder encoder;
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
-        authManager.authenticate(new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response,
+            Authentication auth) {
 
+        if (auth != null && auth.isAuthenticated())
+            return ResponseEntity.badRequest().body(Map.of("error", "Already logged in"));
+
+        Optional<User> user = repo.findByEmail(request.getEmail());
+
+        if (!user.isPresent())
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid email or password"));
+
+        if (!encoder.matches(request.getPassword(), user.get().getPassword()))
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid email or password"));
+
+        authManager.authenticate(new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
         String token = jwtService.generateToken(request.getEmail());
 
         final Cookie cookie = new Cookie("jwt", token);
         cookie.setSecure(true);
         cookie.setHttpOnly(true);
         cookie.setMaxAge(24 * 60 * 60);
+        cookie.setPath("/");
         response.addCookie(cookie);
 
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/signup")
-    public ResponseEntity<?> signup(@Valid @RequestBody SignUpRequest request, HttpServletResponse response) {
+    public ResponseEntity<?> signup(@Valid @RequestBody SignUpRequest request, HttpServletResponse response, Authentication auth) {
+        if (auth != null && auth.isAuthenticated())
+            return ResponseEntity.badRequest().body(Map.of("error", "Already logged in"));
+
         Optional<User> user = repo.findByEmail(request.getEmail());
 
         if (user.isPresent())
-            return ResponseEntity.badRequest().body(Map.of("error", "Email already exists"));
+            return ResponseEntity.badRequest().body(Map.of("email", "Email already exists"));
 
         if (!request.getPasswordRepeat().equals(request.getPassword()))
-            return ResponseEntity.badRequest().body(Map.of("error", "The passwords are not the same"));
+            return ResponseEntity.badRequest().body(Map.of("passwordRepeat", "The passwords are not the same"));
 
         User newUser = new User();
         newUser.setEmail(request.getEmail());
@@ -75,6 +91,11 @@ public class AuthController {
         repo.save(newUser);
 
         return ResponseEntity.ok().body(repo.findByEmail(request.getEmail()));
+    }
+
+    @GetMapping("/me")
+    public boolean getIsLoggedIn(HttpServletResponse response, Authentication auth) {
+        return auth != null && auth.isAuthenticated();
     }
 
     @GetMapping("/test")
