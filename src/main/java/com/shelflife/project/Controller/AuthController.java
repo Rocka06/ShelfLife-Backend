@@ -1,12 +1,11 @@
 package com.shelflife.project.Controller;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,7 +15,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.shelflife.project.dto.LoginRequest;
 import com.shelflife.project.dto.SignUpRequest;
+import com.shelflife.project.model.InvalidJwt;
 import com.shelflife.project.model.User;
+import com.shelflife.project.repository.InvalidJwtRepository;
 import com.shelflife.project.repository.UserRepository;
 import com.shelflife.project.security.JwtService;
 
@@ -33,10 +34,10 @@ public class AuthController {
     private JwtService jwtService;
 
     @Autowired
-    private AuthenticationManager authManager;
+    private UserRepository repo;
 
     @Autowired
-    private UserRepository repo;
+    private InvalidJwtRepository jwtRepo;
 
     @Autowired
     private PasswordEncoder encoder;
@@ -56,7 +57,6 @@ public class AuthController {
         if (!encoder.matches(request.getPassword(), user.get().getPassword()))
             return ResponseEntity.badRequest().body(Map.of("error", "Invalid email or password"));
 
-        authManager.authenticate(new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
         String token = jwtService.generateToken(request.getEmail());
 
         final Cookie cookie = new Cookie("jwt", token);
@@ -70,7 +70,8 @@ public class AuthController {
     }
 
     @PostMapping("/signup")
-    public ResponseEntity<?> signup(@Valid @RequestBody SignUpRequest request, HttpServletResponse response, Authentication auth) {
+    public ResponseEntity<?> signup(@Valid @RequestBody SignUpRequest request, HttpServletResponse response,
+            Authentication auth) {
         if (auth != null && auth.isAuthenticated())
             return ResponseEntity.badRequest().body(Map.of("error", "Already logged in"));
 
@@ -91,6 +92,21 @@ public class AuthController {
         repo.save(newUser);
 
         return ResponseEntity.ok().body(repo.findByEmail(request.getEmail()));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(Authentication auth) {
+        if (auth == null || !auth.isAuthenticated())
+            return ResponseEntity.badRequest().body(null);
+
+        LocalDateTime cutoff = LocalDateTime.now().minusHours(24);
+        jwtRepo.deleteOlderThan(cutoff);
+
+        InvalidJwt jwt = new InvalidJwt();
+        jwt.setToken((String)auth.getCredentials());
+        jwtRepo.save(jwt);
+
+        return ResponseEntity.ok(null);
     }
 
     @GetMapping("/me")
