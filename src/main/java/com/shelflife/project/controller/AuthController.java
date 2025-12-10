@@ -1,4 +1,4 @@
-package com.shelflife.project.Controller;
+package com.shelflife.project.controller;
 
 import java.time.LocalDateTime;
 import java.util.Map;
