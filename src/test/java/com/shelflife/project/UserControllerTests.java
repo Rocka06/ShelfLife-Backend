@@ -170,14 +170,13 @@ public class UserControllerTests {
         String jwt = jwtService.generateToken(testUser.getEmail());
         Cookie jwtCookie = new Cookie("jwt", jwt);
 
-        User user = userRepository.findByEmail(testUser.getEmail()).get();
+        User user = userRepository.findByEmail(testAdmin.getEmail()).get();
 
         mockMvc.perform(delete("/api/users/" + user.getId())
                 .cookie(jwtCookie))
                 .andExpect(status().isForbidden());
 
-        assertTrue(userRepository.findByEmail(testUser.getEmail()).isPresent());
-
+        assertTrue(userRepository.findByEmail(testAdmin.getEmail()).isPresent());
     }
 
     @Test
