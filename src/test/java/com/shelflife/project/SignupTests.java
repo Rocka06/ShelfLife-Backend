@@ -13,6 +13,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.shelflife.project.model.User;
 import com.shelflife.project.repository.UserRepository;
+import com.shelflife.project.security.JwtService;
+
+import jakarta.servlet.http.Cookie;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -32,6 +35,9 @@ public class SignupTests {
 
     @Autowired
     private PasswordEncoder encoder;
+
+    @Autowired
+    private JwtService jwtService;
 
     private User testUser;
 
@@ -209,7 +215,8 @@ public class SignupTests {
     void passwordNotSameError() throws Exception {
         mockMvc.perform(post("/api/auth/signup")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"test1@test.test\", \"username\":\"test\", \"password\":\"test1234\", \"passwordRepeat\":\"test123\"}"))
+                .content(
+                        "{\"email\":\"test1@test.test\", \"username\":\"test\", \"password\":\"test1234\", \"passwordRepeat\":\"test123\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.email").doesNotExist())
                 .andExpect(jsonPath("$.username").doesNotExist())
@@ -217,5 +224,23 @@ public class SignupTests {
                 .andExpect(jsonPath("$.passwordRepeat").exists());
 
         assertFalse(userRepository.existsByEmail("test1@test.test"));
+    }
+
+    @Test
+    void cantSignupWhileLoggedIn() throws Exception {
+        String jwt = jwtService.generateToken("test@test.test");
+        Cookie jwtCookie = new Cookie("jwt", jwt);
+
+        mockMvc.perform(get("/api/auth/me")
+                .cookie(jwtCookie))
+                .andExpect(status().isOk())
+                .andExpect(content().string("true"));
+
+        mockMvc.perform(post("/api/auth/signup")
+                .contentType(MediaType.APPLICATION_JSON)
+                .cookie(jwtCookie)
+                .content(
+                        "{\"email\":\"test1@test.test\", \"username\":\"test1\", \"password\":\"Test123\", \"passwordRepeat\":\"Test123\"}"))
+                .andExpect(status().isBadRequest());
     }
 }

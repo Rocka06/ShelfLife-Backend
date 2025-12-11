@@ -97,7 +97,7 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<?> logout(Authentication auth) {
         if (auth == null || !auth.isAuthenticated())
-            return ResponseEntity.badRequest().body(null);
+            return ResponseEntity.badRequest().body(Map.of("error", "You are not logged in"));
 
         LocalDateTime cutoff = LocalDateTime.now().minusHours(24);
         jwtRepo.deleteOlderThan(cutoff);

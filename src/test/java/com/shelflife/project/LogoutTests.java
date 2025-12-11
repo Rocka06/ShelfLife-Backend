@@ -88,4 +88,26 @@ public class LogoutTests {
         mockMvc.perform(get("/api/auth/test"))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    void cantLogoutMultipleTimes() throws Exception {
+        mockMvc.perform(post("/api/auth/logout")
+                .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+
+        Optional<InvalidJwt> jwt = invalidJwtRepository.findByToken(token);
+        assertTrue(jwt.isPresent());
+
+        mockMvc.perform(get("/api/auth/me"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("false"));
+
+        mockMvc.perform(get("/api/auth/test"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/auth/logout")
+                .header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("error").exists());
+    }
 }
