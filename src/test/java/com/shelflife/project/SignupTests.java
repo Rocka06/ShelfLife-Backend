@@ -56,7 +56,7 @@ public class SignupTests {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                         "{\"email\":\"test1@test.test\", \"username\":\"test1\", \"password\":\"Test123\", \"passwordRepeat\":\"Test123\"}"))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.email").value("test1@test.test"))
                 .andExpect(jsonPath("$.username").value("test1"))
                 .andExpect(jsonPath("$.isAdmin").value("false"))

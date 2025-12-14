@@ -85,34 +85,47 @@ public class UserController {
 
         String userEmail = auth.getName();
         Optional<User> self = repo.findByEmail(userEmail);
+        Optional<User> requestedUser = repo.findById(id);
 
         if (!self.isPresent())
+            return ResponseEntity.notFound().build();
+
+        if (!requestedUser.isPresent())
             return ResponseEntity.notFound().build();
 
         if (!self.get().isAdmin() && self.get().getId() != id)
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 
         if (request.getEmail() != null) {
+            if (request.getEmail().isBlank())
+                return ResponseEntity.badRequest().body(Map.of("email", "Email cant be empty"));
+
             if (repo.existsByEmail(request.getEmail())) {
                 return ResponseEntity.badRequest().body(Map.of("email", "Email already exists"));
             }
 
-            self.get().setEmail(request.getEmail());
+            requestedUser.get().setEmail(request.getEmail());
             // TODO: Invalidate JWT and issue a new one
         }
 
         if (request.getUsername() != null) {
-            self.get().setUsername(request.getUsername());
+            if (request.getUsername().isBlank())
+                return ResponseEntity.badRequest().body(Map.of("username", "Username cant be empty"));
+
+            requestedUser.get().setUsername(request.getUsername());
         }
 
         if (request.getIsAdmin() != null) {
             if (!self.get().isAdmin())
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 
-            self.get().setAdmin(request.getIsAdmin());
+            if (id == self.get().getId())
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+
+            requestedUser.get().setAdmin(request.getIsAdmin());
         }
 
-        repo.save(self.get());
+        repo.save(requestedUser.get());
         return ResponseEntity.ok().build();
     }
 }
