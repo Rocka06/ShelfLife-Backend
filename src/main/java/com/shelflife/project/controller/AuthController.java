@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.shelflife.project.dto.ChangePasswordRequest;
 import com.shelflife.project.dto.LoginRequest;
 import com.shelflife.project.dto.SignUpRequest;
 import com.shelflife.project.model.InvalidJwt;
@@ -91,7 +93,7 @@ public class AuthController {
 
         repo.save(newUser);
 
-        return ResponseEntity.ok().body(repo.findByEmail(request.getEmail()));
+        return ResponseEntity.status(HttpStatus.CREATED).body(repo.findByEmail(request.getEmail()));
     }
 
     @PostMapping("/logout")
@@ -103,10 +105,33 @@ public class AuthController {
         jwtRepo.deleteOlderThan(cutoff);
 
         InvalidJwt jwt = new InvalidJwt();
-        jwt.setToken((String)auth.getCredentials());
+        jwt.setToken((String) auth.getCredentials());
         jwtRepo.save(jwt);
 
         return ResponseEntity.ok(null);
+    }
+
+    @PostMapping("/password")
+    public ResponseEntity<?> changePassword(Authentication auth, @Valid @RequestBody ChangePasswordRequest request) {
+        if (auth == null || !auth.isAuthenticated())
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+
+        String userEmail = auth.getName();
+        Optional<User> self = repo.findByEmail(userEmail);
+
+        if (!self.isPresent())
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid id"));
+
+        if (!encoder.matches(request.getOldPassword(), self.get().getPassword()))
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid old password"));
+
+        if (!request.getNewPassword().equals(request.getNewPasswordRepeat()))
+            return ResponseEntity.badRequest().body(Map.of("newPasswordRepeat", "The passwords are not the same"));
+
+        self.get().setPassword(encoder.encode(request.getNewPassword()));
+        repo.save(self.get());
+
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/me")
