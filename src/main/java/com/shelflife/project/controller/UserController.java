@@ -3,9 +3,11 @@ package com.shelflife.project.controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.shelflife.project.dto.ChangeUserDataRequest;
 import com.shelflife.project.model.User;
 import com.shelflife.project.repository.UserRepository;
 
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 
 import java.util.List;
@@ -17,7 +19,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 
 @RestController
 @AllArgsConstructor
@@ -47,7 +51,7 @@ public class UserController {
         Optional<User> user = repo.findById(id);
 
         if (!user.isPresent())
-            return ResponseEntity.badRequest().body(Map.of("error", "Invalid id"));
+            return ResponseEntity.notFound().build();
 
         return ResponseEntity.ok(user.get());
     }
@@ -58,18 +62,57 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 
         String userEmail = auth.getName();
-        User self = repo.findByEmail(userEmail).get();
+        Optional<User> self = repo.findByEmail(userEmail);
 
-        if(!self.isAdmin())
+        if (!self.isPresent())
+            return ResponseEntity.notFound().build();
+
+        if (!self.get().isAdmin())
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 
-        if (!repo.existsById(id))
-            return ResponseEntity.badRequest().body(Map.of("error", "Invalid id"));
-
-        if (self.getId() == id)
+        if (self.get().getId() == id)
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "You can't delete yourself"));
 
         repo.deleteById(id);
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<?> updateUserData(@PathVariable long id, Authentication auth,
+            @Valid @RequestBody ChangeUserDataRequest request) {
+        if (auth == null || !auth.isAuthenticated())
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+
+        String userEmail = auth.getName();
+        Optional<User> self = repo.findByEmail(userEmail);
+
+        if (!self.isPresent())
+            return ResponseEntity.notFound().build();
+
+        if (!self.get().isAdmin() && self.get().getId() != id)
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+
+        if (request.getEmail() != null) {
+            if (repo.existsByEmail(request.getEmail())) {
+                return ResponseEntity.badRequest().body(Map.of("email", "Email already exists"));
+            }
+
+            self.get().setEmail(request.getEmail());
+            // TODO: Invalidate JWT and issue a new one
+        }
+
+        if (request.getUsername() != null) {
+            self.get().setUsername(request.getUsername());
+        }
+
+        if (request.getIsAdmin() != null) {
+            if (!self.get().isAdmin())
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+
+            self.get().setAdmin(request.getIsAdmin());
+        }
+
+        repo.save(self.get());
         return ResponseEntity.ok().build();
     }
 }

@@ -19,13 +19,16 @@ public class SignUpRequest {
     private String email;
 
     @NotBlank(message = "Username cannot be empty")
+    @NotNull(message = "Username cannot be empty")
     @Size(max = 40, message = "The username can only be 40 characters")
     private String username;
 
     @NotBlank(message = "Password cannot be empty")
+    @NotNull(message = "Password cannot be empty")
     @Size(min = 6, message = "The password should be at least 6 characters")
     private String password;
 
     @NotBlank(message = "Repeat the password")
+    @NotNull(message = "Repeat the password")
     private String passwordRepeat;
 }
