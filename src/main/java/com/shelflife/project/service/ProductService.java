@@ -22,49 +22,73 @@ public class ProductService {
     @Autowired
     private ProductRepository productRepository;
 
-    List<Product> getAllProducts() {
+    public List<Product> getAllProducts() {
         return productRepository.findAll();
     }
 
-    List<Product> getProductsByName(String name) {
+    public List<Product> getProductsByName(String name) {
         return productRepository.findByName(name);
     }
 
-    List<Product> getProductsByCategory(String category) {
+    public List<Product> getProductsByCategory(String category) {
         return productRepository.findByCategory(category);
     }
 
-    List<String> getCategories() {
+    public List<String> getCategories() {
         return productRepository.getCategories();
     }
 
-    Product getProductByID(final long id) {
-        return productRepository.findById(id).orElse(null);
+    public Product getProductByID(final long id) throws ItemNotFoundException {
+        Optional<Product> product = productRepository.findById(id);
+
+        if (!product.isPresent())
+            throw new ItemNotFoundException();
+
+        return product.get();
     }
 
-    Product getProductByBarcode(final String barcode) {
-        return productRepository.findByBarcode(barcode).orElse(null);
+    public Product getProductByBarcode(final String barcode) throws ItemNotFoundException {
+        Optional<Product> product = productRepository.findByBarcode(barcode);
+
+        if (!product.isPresent())
+            throw new ItemNotFoundException();
+
+        return product.get();
     }
 
-    boolean productExistsByID(final long id) {
+    public boolean productExistsByID(final long id) {
         return productRepository.existsById(id);
     }
 
-    boolean productExistsByBarcode(final String barcode) {
+    public boolean productExistsByBarcode(final String barcode) {
         return productRepository.findByBarcode(barcode).isPresent();
     }
 
     @Transactional
-    Product saveProduct(Product product) throws BarcodeExistsException {
+    public Product saveProduct(Product product) throws BarcodeExistsException, InvalidParameterException {
         if (!product.getBarcode().isBlank())
             if (productExistsByBarcode(product.getBarcode()))
                 throw new BarcodeExistsException(product.getBarcode());
+
+        if (product.getName().isBlank())
+            throw new InvalidParameterException("name");
+
+        if (product.getCategory().isBlank())
+            throw new InvalidParameterException("category");
+
+        if (product.getExpirationDaysDelta() <= 0) {
+            throw new InvalidParameterException("expirationDaysDelta");
+        }
+
+        if (product.getRunningLow() <= 0) {
+            throw new InvalidParameterException("runningLow");
+        }
 
         return productRepository.save(product);
     }
 
     @Transactional
-    Product updateProduct(long productId, Product product, User currentUser)
+    public Product updateProduct(long productId, Product product, User currentUser)
             throws InvalidParameterException, AccessDeniedException {
         Product productDB = getProductByID(productId);
 
@@ -83,13 +107,13 @@ public class ProductService {
             productDB.setBarcode(product.getBarcode());
         }
 
-        if (product.getExpirationDaysDelta() <= 0) {
+        if (product.getExpirationDaysDelta() > 0) {
             productDB.setExpirationDaysDelta(product.getExpirationDaysDelta());
         } else {
             throw new InvalidParameterException("expirationDaysDelta");
         }
 
-        if (product.getRunningLow() <= 0) {
+        if (product.getRunningLow() > 0) {
             productDB.setRunningLow(product.getRunningLow());
         } else {
             throw new InvalidParameterException("runningLow");
@@ -99,13 +123,10 @@ public class ProductService {
     }
 
     @Transactional
-    void removeProduct(long id, User currentUser) throws ItemNotFoundException {
-        Optional<Product> product = productRepository.findById(id);
+    public void removeProduct(long id, User currentUser) throws ItemNotFoundException {
+        Product product = getProductByID(id);
 
-        if (!product.isPresent())
-            throw new ItemNotFoundException();
-
-        if (product.get().getOwnerId() != currentUser.getId() && !currentUser.isAdmin())
+        if (product.getOwnerId() != currentUser.getId() && !currentUser.isAdmin())
             throw new AccessDeniedException("");
 
         productRepository.deleteById(id);
