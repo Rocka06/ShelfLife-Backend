@@ -120,10 +120,10 @@ public class AuthController {
         Optional<User> self = repo.findByEmail(userEmail);
 
         if (!self.isPresent())
-            return ResponseEntity.badRequest().body(Map.of("error", "Invalid id"));
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 
         if (!encoder.matches(request.getOldPassword(), self.get().getPassword()))
-            return ResponseEntity.badRequest().body(Map.of("error", "Invalid old password"));
+            return ResponseEntity.badRequest().body(Map.of("oldPassword", "Invalid old password"));
 
         if (!request.getNewPassword().equals(request.getNewPasswordRepeat()))
             return ResponseEntity.badRequest().body(Map.of("newPasswordRepeat", "The passwords are not the same"));
