@@ -49,7 +49,7 @@ public class LoginTests {
     void loginSuccessful() throws Exception {
         MvcResult result = mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(getLoginJson("test@test.test", "test123")))
+                .content(getLoginJson(testUser.getEmail(), "test123")))
                 .andExpect(status().isOk())
                 .andExpect(cookie().exists("jwt"))
                 .andReturn();
@@ -60,7 +60,10 @@ public class LoginTests {
         mockMvc.perform(get("/api/auth/me")
                 .cookie(jwtCookie))
                 .andExpect(status().isOk())
-                .andExpect(content().string("true"));
+                .andExpect(jsonPath("$.id").value(testUser.getId()))
+                .andExpect(jsonPath("$.email").value(testUser.getEmail()))
+                .andExpect(jsonPath("$.username").value(testUser.getUsername()))
+                .andExpect(jsonPath("$.isAdmin").value(testUser.isAdmin()));
     }
 
     @Test
@@ -73,8 +76,7 @@ public class LoginTests {
                 .andReturn();
 
         mockMvc.perform(get("/api/auth/me"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("false"));
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -87,8 +89,7 @@ public class LoginTests {
                 .andReturn();
 
         mockMvc.perform(get("/api/auth/me"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("false"));
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -101,8 +102,7 @@ public class LoginTests {
                 .andReturn();
 
         mockMvc.perform(get("/api/auth/me"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("false"));
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -120,7 +120,10 @@ public class LoginTests {
         mockMvc.perform(get("/api/auth/me")
                 .cookie(jwtCookie))
                 .andExpect(status().isOk())
-                .andExpect(content().string("true"));
+                .andExpect(jsonPath("$.id").value(testUser.getId()))
+                .andExpect(jsonPath("$.email").value(testUser.getEmail()))
+                .andExpect(jsonPath("$.username").value(testUser.getUsername()))
+                .andExpect(jsonPath("$.isAdmin").value(testUser.isAdmin()));
 
         mockMvc.perform(post("/api/auth/login")
                 .cookie(jwtCookie)

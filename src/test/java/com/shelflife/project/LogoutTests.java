@@ -65,10 +65,6 @@ public class LogoutTests {
         assertTrue(jwt.isPresent());
 
         mockMvc.perform(get("/api/auth/me"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("false"));
-
-        mockMvc.perform(get("/api/auth/test"))
                 .andExpect(status().isForbidden());
     }
 
@@ -82,10 +78,6 @@ public class LogoutTests {
         assertTrue(jwt.isPresent());
 
         mockMvc.perform(get("/api/auth/me"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("false"));
-
-        mockMvc.perform(get("/api/auth/test"))
                 .andExpect(status().isForbidden());
     }
 
@@ -99,10 +91,6 @@ public class LogoutTests {
         assertTrue(jwt.isPresent());
 
         mockMvc.perform(get("/api/auth/me"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("false"));
-
-        mockMvc.perform(get("/api/auth/test"))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(post("/api/auth/logout")

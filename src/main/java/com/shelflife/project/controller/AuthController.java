@@ -135,13 +135,13 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public boolean getIsLoggedIn(HttpServletResponse response, Authentication auth) {
-        return auth != null && auth.isAuthenticated();
-    }
+    public ResponseEntity<User> getIsLoggedIn(HttpServletResponse response, Authentication auth) {
+        String userEmail = auth.getName();
+        Optional<User> self = repo.findByEmail(userEmail);
 
-    @GetMapping("/test")
-    public String getMethodName() {
-        return "logged in";
-    }
+        if(!self.isPresent())
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 
+        return ResponseEntity.ok(self.get());
+    }
 }

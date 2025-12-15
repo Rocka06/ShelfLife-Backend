@@ -228,13 +228,16 @@ public class SignupTests {
 
     @Test
     void cantSignupWhileLoggedIn() throws Exception {
-        String jwt = jwtService.generateToken("test@test.test");
+        String jwt = jwtService.generateToken(testUser.getEmail());
         Cookie jwtCookie = new Cookie("jwt", jwt);
 
         mockMvc.perform(get("/api/auth/me")
                 .cookie(jwtCookie))
                 .andExpect(status().isOk())
-                .andExpect(content().string("true"));
+                .andExpect(jsonPath("$.id").value(testUser.getId()))
+                .andExpect(jsonPath("$.email").value(testUser.getEmail()))
+                .andExpect(jsonPath("$.username").value(testUser.getUsername()))
+                .andExpect(jsonPath("$.isAdmin").value(testUser.isAdmin()));
 
         mockMvc.perform(post("/api/auth/signup")
                 .contentType(MediaType.APPLICATION_JSON)
