@@ -49,6 +49,16 @@ public class GetUserByAuthTests {
     }
 
     @Test
+    void returnsEmptyWhenNotInDB() {
+        when(authentication.isAuthenticated()).thenReturn(true);
+        when(authentication.getName()).thenReturn("test@test.test");
+
+        Optional<User> result = service.getUserByAuth(authentication);
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
     void returnsUserWhenAuthenticated() {
         String email = "test@test.test";
 

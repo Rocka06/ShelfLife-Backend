@@ -69,7 +69,7 @@ public class UserService implements UserDetailsService {
         return repo.findAll();
     }
 
-    public User getUserById(long id) {
+    public User getUserById(long id) throws ItemNotFoundException {
         Optional<User> user = repo.findById(id);
 
         if (!user.isPresent())
@@ -128,6 +128,7 @@ public class UserService implements UserDetailsService {
         return repo.save(newUser);
     }
 
+    @Transactional
     public void changePassword(@Valid ChangePasswordRequest request, Authentication auth)
             throws AccessDeniedException, InvalidPasswordException, PasswordsDontMatchException {
         Optional<User> currentUser = getUserByAuth(auth);
