@@ -6,14 +6,11 @@ import org.springframework.web.bind.annotation.RestController;
 import com.shelflife.project.dto.ChangeUserDataRequest;
 import com.shelflife.project.exception.ItemNotFoundException;
 import com.shelflife.project.model.User;
-import com.shelflife.project.repository.UserRepository;
 import com.shelflife.project.service.UserService;
 
 import jakarta.validation.Valid;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -33,9 +30,6 @@ public class UserController {
     @Autowired
     private UserService service;
 
-    @Autowired
-    private UserRepository repo;
-
     @GetMapping()
     public ResponseEntity<List<User>> getUsers(Authentication auth) {
         try {
@@ -48,11 +42,13 @@ public class UserController {
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getUser(@PathVariable long id, Authentication auth) {
-        try {
-            User user = service.getUserById(id, auth);
-            return ResponseEntity.ok(user);
-        } catch (AccessDeniedException e) {
+        if (auth == null || !auth.isAuthenticated()) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        try {
+            User user = service.getUserById(id);
+            return ResponseEntity.ok(user);
         } catch (ItemNotFoundException e) {
             return ResponseEntity.notFound().build();
         }
@@ -73,52 +69,13 @@ public class UserController {
     @PatchMapping("/{id}")
     public ResponseEntity<?> updateUserData(@PathVariable long id, Authentication auth,
             @Valid @RequestBody ChangeUserDataRequest request) {
-        if (auth == null || !auth.isAuthenticated())
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-
-        String userEmail = auth.getName();
-        Optional<User> self = repo.findByEmail(userEmail);
-        Optional<User> requestedUser = repo.findById(id);
-
-        if (!self.isPresent())
+        try {
+            User updated = service.updateUser(id, request, auth);
+            return ResponseEntity.ok(updated);
+        } catch (AccessDeniedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        } catch (ItemNotFoundException e) {
             return ResponseEntity.notFound().build();
-
-        if (!requestedUser.isPresent())
-            return ResponseEntity.notFound().build();
-
-        if (!self.get().isAdmin() && self.get().getId() != id)
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-
-        if (request.getEmail() != null) {
-            if (request.getEmail().isBlank())
-                return ResponseEntity.badRequest().body(Map.of("email", "Email cant be empty"));
-
-            if (repo.existsByEmail(request.getEmail())) {
-                return ResponseEntity.badRequest().body(Map.of("email", "Email already exists"));
-            }
-
-            requestedUser.get().setEmail(request.getEmail());
-            // TODO: Invalidate JWT and issue a new one
         }
-
-        if (request.getUsername() != null) {
-            if (request.getUsername().isBlank())
-                return ResponseEntity.badRequest().body(Map.of("username", "Username cant be empty"));
-
-            requestedUser.get().setUsername(request.getUsername());
-        }
-
-        if (request.getIsAdmin() != null) {
-            if (!self.get().isAdmin())
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-
-            if (id == self.get().getId())
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-
-            requestedUser.get().setAdmin(request.getIsAdmin());
-        }
-
-        repo.save(requestedUser.get());
-        return ResponseEntity.ok().build();
     }
 }
