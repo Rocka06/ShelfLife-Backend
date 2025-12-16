@@ -133,7 +133,7 @@ public class UserService implements UserDetailsService {
             throws AccessDeniedException, InvalidPasswordException, PasswordsDontMatchException {
         Optional<User> currentUser = getUserByAuth(auth);
 
-        if (currentUser.isPresent())
+        if (!currentUser.isPresent())
             throw new AccessDeniedException(null);
 
         if (!encoder.matches(request.getOldPassword(), currentUser.get().getPassword()))
@@ -155,37 +155,34 @@ public class UserService implements UserDetailsService {
         if (!currentUser.isPresent())
             throw new AccessDeniedException(null);
 
-        Optional<User> dbUser = repo.findById(id);
+        User dbUser = getUserById(id);
 
-        if (!dbUser.isPresent())
-            throw new ItemNotFoundException();
-
-        if (!currentUser.get().isAdmin() && currentUser.get().getId() != dbUser.get().getId())
+        if (!currentUser.get().isAdmin() && currentUser.get().getId() != dbUser.getId())
             throw new AccessDeniedException(null);
 
         if (request.getUsername() != null && !request.getUsername().isBlank()) {
-            dbUser.get().setUsername(request.getUsername());
+            dbUser.setUsername(request.getUsername());
         }
 
         if (request.getEmail() != null && !request.getEmail().isBlank()) {
             if (repo.existsByEmail(request.getEmail()))
                 throw new EmailExistsException();
 
-            dbUser.get().setEmail(request.getEmail());
+            dbUser.setEmail(request.getEmail());
         }
 
         if (request.getIsAdmin() != null) {
             // Cant set your own admin priviliges
-            if (currentUser.get().getId() == dbUser.get().getId())
+            if (currentUser.get().getId() == dbUser.getId())
                 throw new AccessDeniedException(null);
 
             if (!currentUser.get().isAdmin())
                 throw new AccessDeniedException(null);
 
-            dbUser.get().setAdmin(request.getIsAdmin());
+            dbUser.setAdmin(request.getIsAdmin());
         }
 
-        return repo.save(dbUser.get());
+        return repo.save(dbUser);
     }
 
     @Transactional
@@ -201,11 +198,8 @@ public class UserService implements UserDetailsService {
         if (currentUser.get().getId() == id)
             throw new AccessDeniedException(null);
 
-        Optional<User> userToDelete = repo.findById(id);
-
-        if (!userToDelete.isPresent())
+        if(!repo.existsById(id))
             throw new ItemNotFoundException();
-
         repo.deleteById(id);
     }
 }
