@@ -4,18 +4,21 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.shelflife.project.dto.ChangeUserDataRequest;
+import com.shelflife.project.exception.ItemNotFoundException;
 import com.shelflife.project.model.User;
 import com.shelflife.project.repository.UserRepository;
+import com.shelflife.project.service.UserService;
 
 import jakarta.validation.Valid;
-import lombok.AllArgsConstructor;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,57 +27,47 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 
 @RestController
-@AllArgsConstructor
 @RequestMapping("/api/users")
 public class UserController {
-    private final UserRepository repo;
+
+    @Autowired
+    private UserService service;
+
+    @Autowired
+    private UserRepository repo;
 
     @GetMapping()
     public ResponseEntity<List<User>> getUsers(Authentication auth) {
-        if (auth == null || !auth.isAuthenticated())
+        try {
+            List<User> users = service.getUsers(auth);
+            return ResponseEntity.ok(users);
+        } catch (AccessDeniedException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-
-        boolean isAdmin = auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_admin"));
-
-        if (!isAdmin)
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-
-        return ResponseEntity.ok(repo.findAll());
+        }
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getUser(@PathVariable long id, Authentication auth) {
-        if (auth == null || !auth.isAuthenticated())
+        try {
+            User user = service.getUserById(id, auth);
+            return ResponseEntity.ok(user);
+        } catch (AccessDeniedException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-
-        Optional<User> user = repo.findById(id);
-
-        if (!user.isPresent())
+        } catch (ItemNotFoundException e) {
             return ResponseEntity.notFound().build();
-
-        return ResponseEntity.ok(user.get());
+        }
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteUser(@PathVariable long id, Authentication auth) {
-        if (auth == null || !auth.isAuthenticated())
+        try {
+            service.removeUser(id, auth);
+            return ResponseEntity.ok().build();
+        } catch (AccessDeniedException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-
-        String userEmail = auth.getName();
-        Optional<User> self = repo.findByEmail(userEmail);
-
-        if (!self.isPresent())
+        } catch (ItemNotFoundException e) {
             return ResponseEntity.notFound().build();
-
-        if (!self.get().isAdmin())
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-
-        if (self.get().getId() == id)
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "You can't delete yourself"));
-
-        repo.deleteById(id);
-        return ResponseEntity.ok().build();
+        }
     }
 
     @PatchMapping("/{id}")
