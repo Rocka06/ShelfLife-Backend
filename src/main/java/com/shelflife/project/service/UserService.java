@@ -163,7 +163,7 @@ public class UserService {
 
     @Transactional
     public User updateUser(long id, ChangeUserDataRequest request, Authentication auth)
-            throws ItemNotFoundException, AccessDeniedException, EmailExistsException {
+            throws ItemNotFoundException, AccessDeniedException, EmailExistsException, IllegalArgumentException {
 
         Optional<User> currentUser = getUserByAuth(auth);
 
@@ -175,11 +175,17 @@ public class UserService {
         if (!currentUser.get().isAdmin() && currentUser.get().getId() != dbUser.getId())
             throw new AccessDeniedException(null);
 
-        if (request.getUsername() != null && !request.getUsername().isBlank()) {
+        if (request.getUsername() != null) {
+            if(request.getUsername().isBlank())
+                throw new IllegalArgumentException("username");
+
             dbUser.setUsername(request.getUsername());
         }
 
-        if (request.getEmail() != null && !request.getEmail().isBlank()) {
+        if (request.getEmail() != null) {
+            if(request.getEmail().isBlank())
+                throw new IllegalArgumentException("email");
+
             if (repo.existsByEmail(request.getEmail()))
                 throw new EmailExistsException();
 

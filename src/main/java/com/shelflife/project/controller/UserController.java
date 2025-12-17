@@ -4,6 +4,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.shelflife.project.dto.ChangeUserDataRequest;
+import com.shelflife.project.exception.EmailExistsException;
 import com.shelflife.project.exception.ItemNotFoundException;
 import com.shelflife.project.model.User;
 import com.shelflife.project.service.UserService;
@@ -11,6 +12,7 @@ import com.shelflife.project.service.UserService;
 import jakarta.validation.Valid;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -45,7 +47,7 @@ public class UserController {
         try {
             User user = service.getUserById(id, auth);
             return ResponseEntity.ok(user);
-        } catch(AccessDeniedException e) {
+        } catch (AccessDeniedException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         } catch (ItemNotFoundException e) {
             return ResponseEntity.notFound().build();
@@ -70,6 +72,10 @@ public class UserController {
         try {
             User updated = service.updateUser(id, request, auth);
             return ResponseEntity.ok(updated);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of(e.getMessage(), "Invalid input"));
+        } catch (EmailExistsException e) {
+            return ResponseEntity.badRequest().body(Map.of("email", "This email is already used"));
         } catch (AccessDeniedException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
         } catch (ItemNotFoundException e) {
