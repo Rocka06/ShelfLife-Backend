@@ -27,5 +27,7 @@ jobs:
         java-version: '21'
         distribution: 'temurin'
         cache: maven
+    - name: Create .env file
+      run: cp template.env .env
     - name: Build with Maven
       run: mvn -B clean verify
