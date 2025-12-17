@@ -11,7 +11,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.shelflife.project.repository.InvalidJwtRepository;
-import com.shelflife.project.service.UserService;
+import com.shelflife.project.service.CustomUserDetailsService;
+import com.shelflife.project.service.JwtService;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -29,7 +30,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private InvalidJwtRepository jwtRepository;
 
     @Autowired
-    private UserService userDetailsService;
+    private CustomUserDetailsService userDetailsService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,

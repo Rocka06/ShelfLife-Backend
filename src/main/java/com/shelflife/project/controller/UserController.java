@@ -42,13 +42,11 @@ public class UserController {
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getUser(@PathVariable long id, Authentication auth) {
-        if (auth == null || !auth.isAuthenticated()) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-
         try {
-            User user = service.getUserById(id);
+            User user = service.getUserById(id, auth);
             return ResponseEntity.ok(user);
+        } catch(AccessDeniedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         } catch (ItemNotFoundException e) {
             return ResponseEntity.notFound().build();
         }

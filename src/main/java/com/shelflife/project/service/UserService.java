@@ -6,14 +6,12 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.shelflife.project.dto.ChangePasswordRequest;
 import com.shelflife.project.dto.ChangeUserDataRequest;
+import com.shelflife.project.dto.LoginRequest;
 import com.shelflife.project.dto.SignUpRequest;
 import com.shelflife.project.exception.EmailExistsException;
 import com.shelflife.project.exception.InvalidPasswordException;
@@ -26,25 +24,16 @@ import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 
 @Service
-public class UserService implements UserDetailsService {
+public class UserService {
 
     @Autowired
     private UserRepository repo;
 
     @Autowired
+    private JwtService jwtService;
+
+    @Autowired
     private PasswordEncoder encoder;
-
-    @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = repo.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-
-        return org.springframework.security.core.userdetails.User
-                .withUsername(user.getEmail())
-                .password(user.getPassword())
-                .roles(user.isAdmin() ? "admin" : "user")
-                .build();
-    }
 
     public Optional<User> getUserByAuth(Authentication auth) {
         if (auth == null || !auth.isAuthenticated())
@@ -129,6 +118,32 @@ public class UserService implements UserDetailsService {
     }
 
     @Transactional
+    public String login(@Valid LoginRequest request, Authentication auth)
+            throws AccessDeniedException, ItemNotFoundException {
+        Optional<User> currentUser = getUserByAuth(auth);
+
+        if (currentUser.isPresent())
+            throw new AccessDeniedException(null);
+
+        User dbUser = getUserByEmail(request.getEmail());
+        if (!encoder.matches(request.getPassword(), dbUser.getPassword()))
+            throw new AccessDeniedException(null);
+
+        return jwtService.generateToken(request.getEmail());
+    }
+
+    @Transactional
+    public void logout(Authentication auth) throws AccessDeniedException {
+        Optional<User> currentUser = getUserByAuth(auth);
+
+        if (currentUser.isPresent())
+            throw new AccessDeniedException(null);
+
+        jwtService.removeExpiredInvalidatedTokens();
+        jwtService.invalidateToken((String) auth.getCredentials());
+    }
+
+    @Transactional
     public void changePassword(@Valid ChangePasswordRequest request, Authentication auth)
             throws AccessDeniedException, InvalidPasswordException, PasswordsDontMatchException {
         Optional<User> currentUser = getUserByAuth(auth);
@@ -198,7 +213,7 @@ public class UserService implements UserDetailsService {
         if (currentUser.get().getId() == id)
             throw new AccessDeniedException(null);
 
-        if(!repo.existsById(id))
+        if (!repo.existsById(id))
             throw new ItemNotFoundException();
         repo.deleteById(id);
     }
