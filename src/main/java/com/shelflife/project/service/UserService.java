@@ -136,7 +136,7 @@ public class UserService {
     public void logout(Authentication auth) throws AccessDeniedException {
         Optional<User> currentUser = getUserByAuth(auth);
 
-        if (currentUser.isPresent())
+        if (!currentUser.isPresent())
             throw new AccessDeniedException(null);
 
         jwtService.removeExpiredInvalidatedTokens();
