@@ -7,8 +7,12 @@ import com.shelflife.project.dto.ChangeUserDataRequest;
 import com.shelflife.project.exception.EmailExistsException;
 import com.shelflife.project.exception.ItemNotFoundException;
 import com.shelflife.project.model.User;
+import com.shelflife.project.service.JwtService;
 import com.shelflife.project.service.UserService;
 
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 
 import java.util.List;
@@ -28,6 +32,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
+
+    @Autowired
+    private JwtService jwtService;
 
     @Autowired
     private UserService service;
@@ -68,9 +75,25 @@ public class UserController {
 
     @PatchMapping("/{id}")
     public ResponseEntity<?> updateUserData(@PathVariable long id, Authentication auth,
-            @Valid @RequestBody ChangeUserDataRequest request) {
+            @Valid @RequestBody ChangeUserDataRequest request, HttpServletRequest httpRequest,
+            HttpServletResponse response) {
+
         try {
+            long selfId = service.getUserByAuth(auth).get().getId();
             User updated = service.updateUser(id, request, auth);
+
+            if (request.getEmail() != null && updated.getId() == selfId) {
+                jwtService.invalidateToken((String) auth.getCredentials());
+
+                final Cookie cookie = new Cookie("jwt", jwtService.generateToken(updated.getEmail()));
+                cookie.setSecure(true);
+                cookie.setHttpOnly(true);
+                cookie.setMaxAge(24 * 60 * 60);
+                cookie.setPath("/");
+
+                response.addCookie(cookie);
+            }
+
             return ResponseEntity.ok(updated);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of(e.getMessage(), "Invalid input"));
