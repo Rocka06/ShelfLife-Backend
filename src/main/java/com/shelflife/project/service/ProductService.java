@@ -7,8 +7,10 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
+import com.shelflife.project.dto.CreateProductRequest;
 import com.shelflife.project.exception.BarcodeExistsException;
 import com.shelflife.project.exception.ItemNotFoundException;
 import com.shelflife.project.model.Product;
@@ -19,8 +21,12 @@ import jakarta.transaction.Transactional;
 
 @Service
 public class ProductService {
+
     @Autowired
     private ProductRepository productRepository;
+
+    @Autowired
+    private UserService userService;
 
     public List<Product> getAllProducts() {
         return productRepository.findAll();
@@ -56,6 +62,15 @@ public class ProductService {
         return product.get();
     }
 
+    public boolean existsByBarcode(final String barcode) {
+        try {
+            getProductByBarcode(barcode);
+            return true;
+        } catch (ItemNotFoundException e) {
+            return false;
+        }
+    }
+
     public boolean productExistsByID(final long id) {
         return productRepository.existsById(id);
     }
@@ -65,24 +80,49 @@ public class ProductService {
     }
 
     @Transactional
-    public Product saveProduct(Product product) throws BarcodeExistsException, InvalidParameterException {
-        if (!product.getBarcode().isBlank())
-            if (productExistsByBarcode(product.getBarcode()))
-                throw new BarcodeExistsException(product.getBarcode());
+    public Product saveProduct(CreateProductRequest request, Authentication auth)
+            throws AccessDeniedException, BarcodeExistsException, IllegalArgumentException {
 
-        if (product.getName().isBlank())
-            throw new InvalidParameterException("name");
+        Optional<User> currentUser = userService.getUserByAuth(auth);
+        Product product = new Product();
 
-        if (product.getCategory().isBlank())
-            throw new InvalidParameterException("category");
-
-        if (product.getExpirationDaysDelta() <= 0) {
-            throw new InvalidParameterException("expirationDaysDelta");
+        if (!currentUser.isPresent()) {
+            throw new AccessDeniedException(null);
         }
 
-        if (product.getRunningLow() <= 0) {
-            throw new InvalidParameterException("runningLow");
+        if (request.getBarcode() != null) {
+            if (!request.getBarcode().isBlank()) {
+                if (existsByBarcode(request.getBarcode()))
+                    throw new BarcodeExistsException(request.getBarcode());
+
+                product.setBarcode(request.getBarcode());
+            }
         }
+
+        if (request.getCategory() == null)
+            throw new IllegalArgumentException("category");
+
+        if (request.getCategory().isBlank())
+            throw new IllegalArgumentException("category");
+
+        product.setCategory(request.getCategory());
+
+        if (request.getName() == null)
+            throw new IllegalArgumentException("name");
+
+        if (request.getName().isBlank())
+            throw new IllegalArgumentException("name");
+
+        product.setName(request.getName());
+
+        if (request.getExpirationDaysDelta() < 1)
+            throw new IllegalArgumentException("expirationDaysDelta");
+
+        if (request.getRunningLow() < 1)
+            throw new IllegalArgumentException("runningLow");
+
+        product.setRunningLow(request.getRunningLow());
+        product.setExpirationDaysDelta(request.getExpirationDaysDelta());
 
         return productRepository.save(product);
     }
