@@ -90,6 +90,8 @@ public class ProductService {
             throw new AccessDeniedException(null);
         }
 
+        product.setOwnerId(currentUser.get().getId());
+
         if (request.getBarcode() != null) {
             if (!request.getBarcode().isBlank()) {
                 if (existsByBarcode(request.getBarcode()))

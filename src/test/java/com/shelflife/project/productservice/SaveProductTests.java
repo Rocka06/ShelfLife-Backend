@@ -1,6 +1,7 @@
 package com.shelflife.project.productservice;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -45,10 +46,12 @@ public class SaveProductTests {
     @Test
     void successfulCreation() {
         when(userService.getUserByAuth(auth)).thenReturn(Optional.of(testUser(1, false)));
+        when(repo.save(any(Product.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
-        assertDoesNotThrow(() -> {
-            productService.saveProduct(validRequest(), auth);
-        });
+        Product p = productService.saveProduct(validRequest(), auth);
+        assertNotNull(p);
+        assertEquals(1, p.getOwnerId());
 
         verify(repo).save(any(Product.class));
     }
