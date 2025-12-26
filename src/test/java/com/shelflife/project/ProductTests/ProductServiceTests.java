@@ -14,8 +14,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.context.ActiveProfiles;
 
-import com.shelflife.project.exceptions.BarcodeExistsException;
-import com.shelflife.project.exceptions.ItemNotFoundException;
+import com.shelflife.project.exception.BarcodeExistsException;
+import com.shelflife.project.exception.ItemNotFoundException;
 import com.shelflife.project.model.Product;
 import com.shelflife.project.model.User;
 import com.shelflife.project.service.ProductService;

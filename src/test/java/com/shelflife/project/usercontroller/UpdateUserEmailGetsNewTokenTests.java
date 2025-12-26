@@ -1,4 +1,10 @@
-package com.shelflife.project;
+package com.shelflife.project.usercontroller;
+
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,23 +15,20 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import com.shelflife.project.model.User;
 import com.shelflife.project.repository.UserRepository;
-import com.shelflife.project.security.JwtService;
+import com.shelflife.project.service.JwtService;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.transaction.Transactional;
-
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
-public class PasswordChangeTests {
+public class UpdateUserEmailGetsNewTokenTests {
     @Autowired
     private MockMvc mockMvc;
 
@@ -59,68 +62,75 @@ public class PasswordChangeTests {
     }
 
     @Test
-    void changeSuccessfulAsUser() throws Exception {
+    void getsNewTokenAsUser() throws Exception {
         String jwt = jwtService.generateToken(testUser.getEmail());
         Cookie jwtCookie = new Cookie("jwt", jwt);
 
-        mockMvc.perform(post("/api/auth/password")
+        MvcResult res = mockMvc.perform(patch("/api/users/" + testUser.getId())
                 .cookie(jwtCookie)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
-                        "{\"oldPassword\":\"test123\", \"newPassword\":\"test1234\", \"newPasswordRepeat\":\"test1234\"}"))
+                        "{\"email\":\"newEmail@test.test\"}"))
+                .andExpect(status().isOk()).andReturn();
+
+        // Invalidated
+        mockMvc.perform(get("/api/auth/me")
+                .cookie(jwtCookie))
+                .andExpect(status().isForbidden());
+
+        Cookie newJwt = res.getResponse().getCookie("jwt");
+        assertNotNull(newJwt);
+        assertNotEquals(jwt, newJwt.getValue());
+
+        jwtCookie.setValue(newJwt.getValue());
+        mockMvc.perform(get("/api/auth/me")
+                .cookie(jwtCookie))
                 .andExpect(status().isOk());
-
-        User user = userRepository.findByEmail(testUser.getEmail()).get();
-        assertTrue(encoder.matches("test1234", user.getPassword()));
     }
 
     @Test
-    void changeSuccessfulAsAdmin() throws Exception {
+    void getsNewTokenAsAdmin() throws Exception {
         String jwt = jwtService.generateToken(testAdmin.getEmail());
         Cookie jwtCookie = new Cookie("jwt", jwt);
 
-        mockMvc.perform(post("/api/auth/password")
+        MvcResult res = mockMvc.perform(patch("/api/users/" + testAdmin.getId())
                 .cookie(jwtCookie)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
-                        "{\"oldPassword\":\"test123\", \"newPassword\":\"test1234\", \"newPasswordRepeat\":\"test1234\"}"))
+                        "{\"email\":\"newEmail@test.test\"}"))
+                .andExpect(status().isOk()).andReturn();
+
+        // Invalidated
+        mockMvc.perform(get("/api/auth/me")
+                .cookie(jwtCookie))
+                .andExpect(status().isForbidden());
+
+        Cookie newJwt = res.getResponse().getCookie("jwt");
+        assertNotNull(newJwt);
+        assertNotEquals(jwt, newJwt.getValue());
+
+        jwtCookie.setValue(newJwt.getValue());
+        mockMvc.perform(get("/api/auth/me")
+                .cookie(jwtCookie))
                 .andExpect(status().isOk());
-
-        User user = userRepository.findByEmail(testAdmin.getEmail()).get();
-        assertTrue(encoder.matches("test1234", user.getPassword()));
     }
 
     @Test
-    void invalidOldPassword() throws Exception {
+    void doesNotGetNewTokenAsAdmin() throws Exception {
         String jwt = jwtService.generateToken(testAdmin.getEmail());
         Cookie jwtCookie = new Cookie("jwt", jwt);
 
-        mockMvc.perform(post("/api/auth/password")
+        MvcResult res = mockMvc.perform(patch("/api/users/" + testUser.getId())
                 .cookie(jwtCookie)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
-                        "{\"oldPassword\":\"test1235\", \"newPassword\":\"test1234\", \"newPasswordRepeat\":\"test1234\"}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.oldPassword").exists());
+                        "{\"email\":\"newEmail@test.test\"}"))
+                .andExpect(status().isOk()).andReturn();
 
-        User user = userRepository.findByEmail(testAdmin.getEmail()).get();
-        assertTrue(encoder.matches("test123", user.getPassword()));
-    }
+        assertNull(res.getResponse().getCookie("jwt"));
 
-    @Test
-    void passwordsDontMatch() throws Exception {
-        String jwt = jwtService.generateToken(testAdmin.getEmail());
-        Cookie jwtCookie = new Cookie("jwt", jwt);
-
-        mockMvc.perform(post("/api/auth/password")
-                .cookie(jwtCookie)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(
-                        "{\"oldPassword\":\"test123\", \"newPassword\":\"test1234\", \"newPasswordRepeat\":\"test12345\"}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.newPasswordRepeat").exists());
-
-        User user = userRepository.findByEmail(testAdmin.getEmail()).get();
-        assertTrue(encoder.matches("test123", user.getPassword()));
+        mockMvc.perform(get("/api/auth/me")
+                .cookie(jwtCookie))
+                .andExpect(status().isOk());
     }
 }

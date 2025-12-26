@@ -1,4 +1,4 @@
-package com.shelflife.project;
+package com.shelflife.project.authcontroller;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

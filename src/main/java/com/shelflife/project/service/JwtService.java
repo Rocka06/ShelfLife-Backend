@@ -1,10 +1,15 @@
-package com.shelflife.project.security;
+package com.shelflife.project.service;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import com.shelflife.project.model.InvalidJwt;
+import com.shelflife.project.repository.InvalidJwtRepository;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -12,8 +17,12 @@ import io.jsonwebtoken.security.Keys;
 
 @Service
 public class JwtService {
+
     @Value("${jwt.secret}")
     private String secret;
+
+    @Autowired
+    private InvalidJwtRepository invalidJwtRepository;
 
     public String generateToken(String email) {
         return Jwts.builder()
@@ -32,5 +41,21 @@ public class JwtService {
                 .parseClaimsJws(token)
                 .getBody()
                 .getSubject();
+    }
+
+    public void invalidateToken(String token) {
+        if (invalidJwtRepository.findByToken(token).isPresent()) {
+            return;
+        }
+
+        InvalidJwt jwt = new InvalidJwt();
+        jwt.setToken(token);
+
+        invalidJwtRepository.save(jwt);
+    }
+
+    public void removeExpiredInvalidatedTokens() {
+        LocalDateTime cutoff = LocalDateTime.now().minusHours(24);
+        invalidJwtRepository.deleteOlderThan(cutoff);
     }
 }

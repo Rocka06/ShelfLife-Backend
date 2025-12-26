@@ -9,8 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
-import com.shelflife.project.exceptions.BarcodeExistsException;
-import com.shelflife.project.exceptions.ItemNotFoundException;
+import com.shelflife.project.exception.BarcodeExistsException;
+import com.shelflife.project.exception.ItemNotFoundException;
 import com.shelflife.project.model.Product;
 import com.shelflife.project.model.User;
 import com.shelflife.project.repository.ProductRepository;

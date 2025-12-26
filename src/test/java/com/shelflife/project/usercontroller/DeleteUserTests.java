@@ -1,4 +1,7 @@
-package com.shelflife.project;
+package com.shelflife.project.usercontroller;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,7 +14,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.shelflife.project.model.User;
 import com.shelflife.project.repository.UserRepository;
-import com.shelflife.project.security.JwtService;
+import com.shelflife.project.service.JwtService;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.transaction.Transactional;
@@ -19,15 +22,11 @@ import jakarta.transaction.Transactional;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
-public class UserControllerTests {
+public class DeleteUserTests {
     @Autowired
     private MockMvc mockMvc;
 
@@ -60,83 +59,6 @@ public class UserControllerTests {
         userRepository.save(testUser);
     }
 
-    // Users
-    @Test
-    void getUsersSuccessfulAsAdmin() throws Exception {
-        String jwt = jwtService.generateToken(testAdmin.getEmail());
-        Cookie jwtCookie = new Cookie("jwt", jwt);
-
-        mockMvc.perform(get("/api/users")
-                .cookie(jwtCookie))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(2)))
-                .andExpect(jsonPath("$[0].id").exists())
-                .andExpect(jsonPath("$[0].email").value(testAdmin.getEmail()))
-                .andExpect(jsonPath("$[0].username").value(testAdmin.getUsername()))
-                .andExpect(jsonPath("$[0].isAdmin").value(true));
-    }
-
-    @Test
-    void cantGetUsersAsUser() throws Exception {
-        String jwt = jwtService.generateToken(testUser.getEmail());
-        Cookie jwtCookie = new Cookie("jwt", jwt);
-
-        mockMvc.perform(get("/api/users")
-                .cookie(jwtCookie))
-                .andExpect(status().isForbidden())
-                .andExpect(content().string(""));
-    }
-
-    @Test
-    void cantGetUsersAsGuest() throws Exception {
-        mockMvc.perform(get("/api/users"))
-                .andExpect(status().isForbidden())
-                .andExpect(content().string(""));
-    }
-
-    // User
-    @Test
-    void getUserSuccessfulAsAdmin() throws Exception {
-        String jwt = jwtService.generateToken(testAdmin.getEmail());
-        Cookie jwtCookie = new Cookie("jwt", jwt);
-
-        User user = userRepository.findByEmail(testAdmin.getEmail()).get();
-
-        mockMvc.perform(get("/api/users/" + user.getId())
-                .cookie(jwtCookie))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(user.getId()))
-                .andExpect(jsonPath("$.email").value(user.getEmail()))
-                .andExpect(jsonPath("$.username").value(user.getUsername()))
-                .andExpect(jsonPath("$.isAdmin").value(user.isAdmin()));
-    }
-
-    @Test
-    void getUserSuccessfulAsUser() throws Exception {
-        String jwt = jwtService.generateToken(testUser.getEmail());
-        Cookie jwtCookie = new Cookie("jwt", jwt);
-
-        User user = userRepository.findByEmail(testUser.getEmail()).get();
-
-        mockMvc.perform(get("/api/users/" + user.getId())
-                .cookie(jwtCookie))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(user.getId()))
-                .andExpect(jsonPath("$.email").value(user.getEmail()))
-                .andExpect(jsonPath("$.username").value(user.getUsername()))
-                .andExpect(jsonPath("$.isAdmin").value(user.isAdmin()));
-    }
-
-    @Test
-    void cantGetUserAsGuest() throws Exception {
-        User user = userRepository.findByEmail(testUser.getEmail()).get();
-
-        mockMvc.perform(get("/api/users/" + user.getId()))
-                .andExpect(status().isForbidden())
-                .andExpect(content().string(""));
-    }
-
-    // Delete user
     @Test
     void deleteUserSuccessfulAsAdmin() throws Exception {
         String jwt = jwtService.generateToken(testAdmin.getEmail());

@@ -1,4 +1,4 @@
-package com.shelflife.project;
+package com.shelflife.project.authcontroller;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.shelflife.project.model.User;
 import com.shelflife.project.repository.UserRepository;
-import com.shelflife.project.security.JwtService;
+import com.shelflife.project.service.JwtService;
 
 import jakarta.servlet.http.Cookie;
 
@@ -244,6 +244,6 @@ public class SignupTests {
                 .cookie(jwtCookie)
                 .content(
                         "{\"email\":\"test1@test.test\", \"username\":\"test1\", \"password\":\"Test123\", \"passwordRepeat\":\"Test123\"}"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isForbidden());
     }
 }
