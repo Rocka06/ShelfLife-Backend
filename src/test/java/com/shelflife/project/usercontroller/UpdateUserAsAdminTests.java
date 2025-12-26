@@ -1,4 +1,4 @@
-package com.shelflife.project.UpdateUserTests;
+package com.shelflife.project.usercontroller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -15,7 +15,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.shelflife.project.model.User;
 import com.shelflife.project.repository.UserRepository;
-import com.shelflife.project.security.JwtService;
+import com.shelflife.project.service.JwtService;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.transaction.Transactional;

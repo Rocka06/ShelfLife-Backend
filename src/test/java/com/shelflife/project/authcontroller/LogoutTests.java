@@ -1,4 +1,4 @@
-package com.shelflife.project;
+package com.shelflife.project.authcontroller;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -14,7 +14,7 @@ import com.shelflife.project.model.InvalidJwt;
 import com.shelflife.project.model.User;
 import com.shelflife.project.repository.InvalidJwtRepository;
 import com.shelflife.project.repository.UserRepository;
-import com.shelflife.project.security.JwtService;
+import com.shelflife.project.service.JwtService;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.transaction.Transactional;
