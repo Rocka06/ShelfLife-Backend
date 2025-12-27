@@ -171,11 +171,15 @@ public class ProductService {
     }
 
     @Transactional
-    public void removeProduct(long id, User currentUser) throws ItemNotFoundException {
-        Product product = getProductByID(id);
+    public void removeProduct(long id, Authentication auth) throws AccessDeniedException, ItemNotFoundException {
+        Optional<User> currentUser = userService.getUserByAuth(auth);
 
-        if (product.getOwnerId() != currentUser.getId() && !currentUser.isAdmin())
-            throw new AccessDeniedException("");
+        if (!currentUser.isPresent())
+            throw new AccessDeniedException(null);
+
+        Product product = getProductByID(id);
+        if (!currentUser.get().isAdmin() && currentUser.get().getId() != product.getOwnerId())
+            throw new AccessDeniedException(null);
 
         productRepository.deleteById(id);
     }
