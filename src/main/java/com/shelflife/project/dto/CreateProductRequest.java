@@ -24,13 +24,9 @@ public class CreateProductRequest {
     @Length(max = 40, message = "The barcode can only be 40 characters long")
     private String barcode;
 
-    @NotBlank(message = "Expiration delta cannot be empty")
-    @NotNull(message = "Expiration delta cannot be empty")
     @Min(value = 1, message = "Expiration delta must be larger than 0")
     private int expirationDaysDelta;
 
-    @NotBlank(message = "Running low cannot be empty")
-    @NotNull(message = "Running low cannot be empty")
     @Min(value = 1, message = "Running low must be larger than 0")
     private int runningLow;
 }
