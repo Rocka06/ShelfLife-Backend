@@ -130,7 +130,7 @@ public class ProductService {
 
     @Transactional
     public Product updateProduct(long productId, UpdateProductRequest request, Authentication auth)
-            throws BarcodeExistsException, AccessDeniedException {
+            throws BarcodeExistsException, AccessDeniedException, IllegalArgumentException {
         Optional<User> currentUser = userService.getUserByAuth(auth);
 
         if (!currentUser.isPresent())
