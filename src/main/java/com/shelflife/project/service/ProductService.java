@@ -1,8 +1,6 @@
 package com.shelflife.project.service;
 
-import java.security.InvalidParameterException;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +9,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import com.shelflife.project.dto.CreateProductRequest;
+import com.shelflife.project.dto.UpdateProductRequest;
 import com.shelflife.project.exception.BarcodeExistsException;
 import com.shelflife.project.exception.ItemNotFoundException;
 import com.shelflife.project.model.Product;
@@ -130,35 +129,42 @@ public class ProductService {
     }
 
     @Transactional
-    public Product updateProduct(long productId, Product product, User currentUser)
-            throws InvalidParameterException, AccessDeniedException {
+    public Product updateProduct(long productId, UpdateProductRequest request, Authentication auth)
+            throws BarcodeExistsException, AccessDeniedException {
+        Optional<User> currentUser = userService.getUserByAuth(auth);
+
+        if (!currentUser.isPresent())
+            throw new AccessDeniedException(null);
+
         Product productDB = getProductByID(productId);
+        if (currentUser.get().getId() != productDB.getOwnerId() && !currentUser.get().isAdmin())
+            throw new AccessDeniedException(null);
 
-        if (!currentUser.isAdmin() && currentUser.getId() != productDB.getOwnerId())
-            throw new AccessDeniedException("");
+        if (request.getName() != null && !request.getName().isBlank())
+            productDB.setName(request.getName());
 
-        if (Objects.nonNull(product.getName()) && !product.getName().isBlank()) {
-            productDB.setName(product.getName());
+        if (request.getCategory() != null && !request.getCategory().isBlank())
+            productDB.setCategory(request.getCategory());
+
+        if (request.getBarcode() != null && !request.getBarcode().isBlank()) {
+            if (existsByBarcode(request.getBarcode()))
+                throw new BarcodeExistsException(request.getBarcode());
+
+            productDB.setBarcode(request.getBarcode());
         }
 
-        if (Objects.nonNull(product.getCategory()) && !product.getCategory().isBlank()) {
-            productDB.setCategory(product.getCategory());
+        if (request.getExpirationDaysDelta() != null) {
+            if (request.getExpirationDaysDelta() < 1)
+                throw new IllegalArgumentException("expirationDaysDelta");
+
+            productDB.setExpirationDaysDelta(request.getExpirationDaysDelta());
         }
 
-        if (Objects.nonNull(product.getBarcode()) && !product.getBarcode().isBlank()) {
-            productDB.setBarcode(product.getBarcode());
-        }
+        if (request.getRunningLow() != null) {
+            if (request.getRunningLow() < 1)
+                throw new IllegalArgumentException("runningLow");
 
-        if (product.getExpirationDaysDelta() > 0) {
-            productDB.setExpirationDaysDelta(product.getExpirationDaysDelta());
-        } else {
-            throw new InvalidParameterException("expirationDaysDelta");
-        }
-
-        if (product.getRunningLow() > 0) {
-            productDB.setRunningLow(product.getRunningLow());
-        } else {
-            throw new InvalidParameterException("runningLow");
+            productDB.setRunningLow(request.getRunningLow());
         }
 
         return productRepository.save(productDB);
