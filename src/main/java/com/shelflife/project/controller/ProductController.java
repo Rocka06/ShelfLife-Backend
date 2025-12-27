@@ -83,7 +83,7 @@ public class ProductController {
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<?> updateProduct(@PathVariable long id, @Valid UpdateProductRequest request,
+    public ResponseEntity<?> updateProduct(@PathVariable long id, @Valid @RequestBody UpdateProductRequest request,
             Authentication auth) {
         try {
             return ResponseEntity.ok(productService.updateProduct(id, request, auth));

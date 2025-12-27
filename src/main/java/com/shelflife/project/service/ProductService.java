@@ -140,14 +140,25 @@ public class ProductService {
         if (currentUser.get().getId() != productDB.getOwnerId() && !currentUser.get().isAdmin())
             throw new AccessDeniedException(null);
 
-        if (request.getName() != null && !request.getName().isBlank())
+        if (request.getName() != null) {
+            if (request.getName().isBlank())
+                throw new IllegalArgumentException("name");
+
             productDB.setName(request.getName());
+        }
 
-        if (request.getCategory() != null && !request.getCategory().isBlank())
+        if (request.getCategory() != null) {
+            if (request.getCategory().isBlank())
+                throw new IllegalArgumentException("category");
+
             productDB.setCategory(request.getCategory());
+        }
 
-        if (request.getBarcode() != null && !request.getBarcode().isBlank()) {
-            if (existsByBarcode(request.getBarcode()))
+        if (request.getBarcode() != null) {
+            if (request.getBarcode().isBlank())
+                throw new IllegalArgumentException("barcode");
+
+            if(existsByBarcode(request.getBarcode()))
                 throw new BarcodeExistsException(request.getBarcode());
 
             productDB.setBarcode(request.getBarcode());

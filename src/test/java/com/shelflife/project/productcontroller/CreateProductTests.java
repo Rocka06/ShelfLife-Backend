@@ -19,7 +19,6 @@ import com.shelflife.project.service.JwtService;
 import jakarta.servlet.http.Cookie;
 import jakarta.transaction.Transactional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -78,13 +77,9 @@ public class CreateProductTests {
 
     @Test
     void forbiddenAsAnonymous() throws Exception {
-        mockMvc.perform(patch("/api/products/")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(
-                        "{\"name\":\"newName\"}"))
+        mockMvc.perform(post("/api/products")
+                .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
-
-        assertEquals(testProduct.getName(), productRepository.findById(testProduct.getId()).get().getName());
     }
 
     @Test
