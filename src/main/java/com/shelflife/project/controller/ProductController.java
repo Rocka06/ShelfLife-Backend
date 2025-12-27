@@ -49,7 +49,7 @@ public class ProductController {
     }
 
     @GetMapping("/barcode/{code}")
-    public ResponseEntity<?> getMethodName(@PathVariable String code) {
+    public ResponseEntity<?> getProductByBarcode(@PathVariable String code) {
         try {
             return ResponseEntity.ok(productService.getProductByBarcode(code));
         } catch (ItemNotFoundException e) {
